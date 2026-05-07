@@ -1,22 +1,29 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tsconfigPaths from "vite-tsconfig-paths";
 import { traeBadgePlugin } from 'vite-plugin-trae-solo-badge';
 
-// https://vite.dev/config/
+function removeModuleType(): Plugin {
+  return {
+    name: 'remove-module-type',
+    transformIndexHtml(html) {
+      return html.replace(/<script type="module" /g, '<script ');
+    },
+  };
+}
+
 export default defineConfig({
   base: './',
   build: {
     sourcemap: 'hidden',
+    rollupOptions: {
+      output: {
+        format: 'iife',
+      },
+    },
   },
   plugins: [
-    react({
-      babel: {
-        plugins: [
-          'react-dev-locator',
-        ],
-      },
-    }),
+    react(),
     traeBadgePlugin({
       variant: 'dark',
       position: 'bottom-right',
@@ -26,6 +33,7 @@ export default defineConfig({
       autoTheme: true,
       autoThemeTarget: '#root'
     }), 
-    tsconfigPaths()
+    tsconfigPaths(),
+    removeModuleType(),
   ],
 })
