@@ -3,13 +3,13 @@ const path = require('path');
 const { build } = require('esbuild');
 
 async function main() {
-  console.log('📦 开始构建最终单文件版本...');
+  console.log('📦 开始构建完全离线版单文件...');
 
-  // 1. 读取并清理 Tailwind CSS (移除 Google Fonts @import)
+  // 1. 读取并清理 Tailwind CSS
   let tailwindCSS = fs.readFileSync('./dist/tailwind-full.css', 'utf-8');
   tailwindCSS = tailwindCSS.replace(/@import\s+url\([^)]*\)\s*;?/g, '');
 
-  // 2. 用 esbuild 打包应用代码 (React/ReactDOM 为外部依赖)
+  // 2. 用 esbuild 打包应用代码 (不设置external，让React也被打包进来)
   const result = await build({
     entryPoints: ['./src/main.tsx'],
     bundle: true,
@@ -18,7 +18,6 @@ async function main() {
     minify: true,
     sourcemap: false,
     target: ['chrome90', 'firefox88', 'safari14', 'edge90'],
-    external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
     define: {
       'process.env.NODE_ENV': '"production"',
     },
@@ -37,7 +36,12 @@ async function main() {
 
   const jsCode = result.outputFiles[0].text;
 
-  // 3. 组装完整的单文件 HTML
+  // 3. 读取本地 React 文件（用于确保 react/jsx-runtime 正确）
+  const reactCode = fs.readFileSync('./dist/react.min.js', 'utf-8');
+  const reactDomCode = fs.readFileSync('./dist/react-dom.min.js', 'utf-8');
+  const clsxCode = fs.readFileSync('./dist/clsx.min.js', 'utf-8');
+
+  // 4. 组装完整的单文件 HTML（所有JS完全内联）
   const html = `<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -45,9 +49,9 @@ async function main() {
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>销售团队管理系统</title>
 <style>${tailwindCSS}</style>
-<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"><\/script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"><\/script>
-<script src="https://unpkg.com/clsx@2.1.1/dist/clsx.min.js"><\/script>
+<script>${reactCode}<\/script>
+<script>${reactDomCode}<\/script>
+<script>${clsxCode}<\/script>
 </head>
 <body>
 <div id="root"></div>
@@ -57,13 +61,15 @@ ${jsCode}
 </body>
 </html>`;
 
-  const outPath = './dist/sales-team-final.html';
+  const outPath = './dist/sales-team-offline.html';
   fs.writeFileSync(outPath, html);
 
-  const sizeKB = (html.length / 1024).toFixed(0);
-  console.log(`✅ 构建完成! 文件大小: ${sizeKB}KB`);
+  const sizeMB = (html.length / 1024 / 1024).toFixed(2);
+  const sizeKB = Math.round(html.length / 1024);
+  console.log(`✅ 构建完成!`);
+  console.log(`   文件大小: ${sizeKB}KB (${sizeMB}MB)`);
   console.log(`   输出路径: ${outPath}`);
-  console.log(`   包含: React(CDN) + ReactDOM(CDN) + clsx(CDN) + Tailwind CSS + 应用代码`);
+  console.log(`   特性: 100%离线可用，无需网络连接`);
 }
 
 main().catch((e) => {
