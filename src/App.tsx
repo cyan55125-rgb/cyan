@@ -6,10 +6,16 @@ import CustomerDetail from "@/components/CustomerDetail";
 import EmptyState from "@/components/EmptyState";
 import AddCustomerModal from "@/components/AddCustomerModal";
 import AddSaleModal from "@/components/AddSaleModal";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import UndoToast from "@/components/UndoToast";
+import DataSnapshotPanel from "@/components/DataSnapshotPanel";
 
 export default function App() {
   const initialize = useAppStore((s) => s.initialize);
   const customers = useAppStore((s) => s.customers);
+  const showConfirmDialog = useAppStore((s) => s.showConfirmDialog);
+  const undoAction = useAppStore((s) => s.undoAction);
+  const showSnapshotPanel = useAppStore((s) => s.showSnapshotPanel);
 
   useEffect(() => {
     initialize();
@@ -34,6 +40,10 @@ export default function App() {
 
       <AddCustomerModal />
       <AddSaleModal />
+
+      {showConfirmDialog && <ConfirmDialog />}
+      {undoAction && <UndoToast />}
+      {showSnapshotPanel && <DataSnapshotPanel />}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, CalendarDays } from "lucide-react";
 import { useAppStore } from "@/lib/store";
+import { toInputDateString } from "@/lib/utils";
 
 export default function AddSaleModal() {
   const show = useAppStore((s) => s.showAddSale);
@@ -11,6 +12,7 @@ export default function AddSaleModal() {
   const [customerId, setCustomerId] = useState("");
   const [productName, setProductName] = useState("");
   const [amountStr, setAmountStr] = useState("");
+  const [dateValue, setDateValue] = useState(toInputDateString(new Date().toISOString()));
 
   if (!show) return null;
 
@@ -19,10 +21,11 @@ export default function AddSaleModal() {
     const name = productName.trim();
     const amount = parseFloat(amountStr);
     if (!name || !customerId || isNaN(amount) || amount <= 0) return;
-    addSale(customerId, name, amount);
+    addSale(customerId, name, amount, new Date(dateValue).toISOString());
     setCustomerId("");
     setProductName("");
     setAmountStr("");
+    setDateValue(toInputDateString(new Date().toISOString()));
     close();
   };
 
@@ -45,7 +48,7 @@ export default function AddSaleModal() {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="space-y-2">
             <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               选择客户 *
@@ -65,17 +68,37 @@ export default function AddSaleModal() {
             </select>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              产品名称 *
-            </label>
-            <input
-              type="text"
-              value={productName}
-              onChange={(e) => setProductName(e.target.value)}
-              placeholder="请输入产品名称"
-              className="w-full px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-700/50 text-slate-100 placeholder:text-slate-600 text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                产品名称 *
+              </label>
+              <input
+                type="text"
+                value={productName}
+                onChange={(e) => setProductName(e.target.value)}
+                placeholder="产品名称"
+                className="w-full px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-700/50 text-slate-100 placeholder:text-slate-600 text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                销售日期
+              </label>
+              <div className="relative">
+                <input
+                  type="date"
+                  value={dateValue}
+                  onChange={(e) => setDateValue(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-700/50 text-slate-100 text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all appearance-none cursor-pointer"
+                />
+                <CalendarDays
+                  size={14}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">

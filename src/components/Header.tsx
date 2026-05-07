@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Users, UserPlus, Receipt, Search, X } from "lucide-react";
+import { Users, UserPlus, Receipt, Search, X, Camera } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { Customer } from "@/types";
 
@@ -8,6 +8,7 @@ export default function Header() {
   const openAddSale = useAppStore((s) => s.openAddSale);
   const customers = useAppStore((s) => s.customers);
   const selectCustomer = useAppStore((s) => s.selectCustomer);
+  const setShowSnapshotPanel = useAppStore((s) => s.setShowSnapshotPanel);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Customer[]>([]);
@@ -124,6 +125,15 @@ export default function Header() {
           </div>
         )}
 
+        {customers.length > 0 && (
+          <button
+            onClick={() => setShowSnapshotPanel(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 hover:border-indigo-400/40 transition-all duration-200 cursor-pointer"
+          >
+            <Camera size={16} />
+            数据快照
+          </button>
+        )}
         {customers.length > 0 && (
           <button
             onClick={openAddSale}
