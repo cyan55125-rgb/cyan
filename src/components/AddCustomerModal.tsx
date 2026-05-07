@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { X, Search, ChevronDown } from "lucide-react";
+import { X, Search, ChevronDown, DollarSign } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { Customer } from "@/types";
 
@@ -7,6 +7,7 @@ export default function AddCustomerModal() {
   const show = useAppStore((s) => s.showAddCustomer);
   const close = useAppStore((s) => s.closeAddCustomer);
   const addCustomer = useAppStore((s) => s.addCustomer);
+  const addSale = useAppStore((s) => s.addSale);
   const customers = useAppStore((s) => s.customers);
 
   const [name, setName] = useState("");
@@ -15,12 +16,17 @@ export default function AddCustomerModal() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const [initialProductName, setInitialProductName] = useState("");
+  const [initialAmountStr, setInitialAmountStr] = useState("");
+
   useEffect(() => {
     if (!show) {
       setName("");
       setParentId(null);
       setParentSearch("");
       setDropdownOpen(false);
+      setInitialProductName("");
+      setInitialAmountStr("");
     }
   }, [show]);
 
@@ -59,7 +65,22 @@ export default function AddCustomerModal() {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
-    addCustomer(trimmed, parentId);
+    const newId = addCustomer(trimmed, parentId);
+
+    const initAmount = parseFloat(initialAmountStr);
+    if (
+      !isNaN(initAmount) &&
+      initAmount > 0 &&
+      initialProductName.trim()
+    ) {
+      addSale(
+        newId,
+        initialProductName.trim(),
+        initAmount,
+        new Date().toISOString()
+      );
+    }
+
     close();
   };
 
@@ -161,6 +182,36 @@ export default function AddCustomerModal() {
             <p className="text-[11px] text-slate-600">
               输入关键词搜索并选择上级，不选则为顶级成员
             </p>
+          </div>
+
+          <div className="rounded-lg bg-slate-800/40 border border-slate-700/30 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <DollarSign size={14} className="text-emerald-400 shrink-0" />
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                初始销售额（可选）
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-600 -mt-1.5">
+              可在创建客户时同时录入一笔初始销售记录
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="text"
+                value={initialProductName}
+                onChange={(e) => setInitialProductName(e.target.value)}
+                placeholder="产品名称"
+                className="w-full px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-700/50 text-slate-100 placeholder:text-slate-600 text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+              />
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={initialAmountStr}
+                onChange={(e) => setInitialAmountStr(e.target.value)}
+                placeholder="金额 (¥)"
+                className="w-full px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-700/50 text-slate-100 placeholder:text-slate-600 text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all tabular-nums"
+              />
+            </div>
           </div>
 
           <div className="flex gap-3 pt-2">

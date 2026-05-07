@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { X, CalendarDays } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { X, CalendarDays, Search, ChevronDown, Plus } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { toInputDateString } from "@/lib/utils";
 
@@ -7,12 +7,64 @@ export default function AddSaleModal() {
   const show = useAppStore((s) => s.showAddSale);
   const close = useAppStore((s) => s.closeAddSale);
   const addSale = useAppStore((s) => s.addSale);
+  const addCustomer = useAppStore((s) => s.addCustomer);
   const customers = useAppStore((s) => s.customers);
 
+  const [customerSearch, setCustomerSearch] = useState("");
   const [customerId, setCustomerId] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const customerSearchRef = useRef<HTMLDivElement>(null);
+
   const [productName, setProductName] = useState("");
   const [amountStr, setAmountStr] = useState("");
   const [dateValue, setDateValue] = useState(toInputDateString(new Date().toISOString()));
+
+  useEffect(() => {
+    if (!show) {
+      setCustomerSearch("");
+      setCustomerId("");
+      setProductName("");
+      setAmountStr("");
+      setDateValue(toInputDateString(new Date().toISOString()));
+      setDropdownOpen(false);
+    }
+  }, [show]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (customerSearchRef.current && !customerSearchRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredCustomers = customers.filter(
+    (c) =>
+      c.name.toLowerCase().includes(customerSearch.toLowerCase()) &&
+      (!customerId || c.id !== customerId)
+  );
+
+  const selectedCustomer = customers.find((c) => c.id === customerId);
+
+  function handleSelectCustomer(c: { id: string; name: string }) {
+    setCustomerId(c.id);
+    setCustomerSearch(c.name);
+    setDropdownOpen(false);
+  }
+
+  function handleClearCustomer() {
+    setCustomerId(null as unknown as string);
+    setCustomerSearch("");
+  }
+
+  function handleCreateNew(name: string) {
+    const id = addCustomer(name.trim(), null);
+    setCustomerId(id);
+    setCustomerSearch(name.trim());
+    setDropdownOpen(false);
+  }
 
   if (!show) return null;
 
@@ -22,10 +74,6 @@ export default function AddSaleModal() {
     const amount = parseFloat(amountStr);
     if (!name || !customerId || isNaN(amount) || amount <= 0) return;
     addSale(customerId, name, amount, new Date(dateValue).toISOString());
-    setCustomerId("");
-    setProductName("");
-    setAmountStr("");
-    setDateValue(toInputDateString(new Date().toISOString()));
     close();
   };
 
@@ -49,23 +97,93 @@ export default function AddSaleModal() {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="space-y-2">
+          <div className="space-y-2" ref={customerSearchRef}>
             <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              选择客户 *
+              客户名称 *
             </label>
-            <select
-              value={customerId}
-              onChange={(e) => setCustomerId(e.target.value)}
-              autoFocus
-              className="w-full px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-700/50 text-slate-100 text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all appearance-none cursor-pointer"
-            >
-              <option value="">请选择客户</option>
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <div className="flex items-center gap-2 w-full px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-700/50 text-sm focus-within:border-emerald-500/50 focus-within:ring-1 focus-within:ring-emerald-500/20 transition-all">
+                <Search size={15} className="shrink-0 text-slate-500" />
+                <input
+                  type="text"
+                  value={customerSearch}
+                  onChange={(e) => {
+                    setCustomerSearch(e.target.value);
+                    setDropdownOpen(true);
+                    if (customerId && e.target.value !== selectedCustomer?.name) {
+                      setCustomerId("");
+                    }
+                  }}
+                  onFocus={() => setDropdownOpen(true)}
+                  placeholder="输入或搜索客户名称..."
+                  autoFocus
+                  className="flex-1 bg-transparent outline-none text-slate-100 placeholder:text-slate-600 min-w-0"
+                />
+                {customerId && (
+                  <button
+                    type="button"
+                    onClick={handleClearCustomer}
+                    className="shrink-0 p-0.5 rounded hover:bg-slate-700/50 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+                <ChevronDown
+                  size={15}
+                  className={`shrink-0 text-slate-500 transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}
+                />
+              </div>
+
+              {dropdownOpen && (
+                <div className="absolute z-10 mt-1.5 w-full max-h-52 overflow-y-auto rounded-xl bg-slate-800 border border-slate-700/60 shadow-xl shadow-black/30 custom-scrollbar">
+                  {filteredCustomers.length > 0 && (
+                    <>
+                      <div className="px-3 py-1.5 text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
+                        已有客户
+                      </div>
+                      {filteredCustomers.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onMouseDown={() => handleSelectCustomer(c)}
+                          className={`w-full text-left px-4 py-2.5 flex items-center gap-2.5 transition-colors cursor-pointer ${
+                            customerId === c.id
+                              ? "bg-emerald-500/10 text-emerald-300"
+                              : "hover:bg-slate-700/50 text-slate-300"
+                          }`}
+                        >
+                          <span className="truncate">{c.name}</span>
+                        </button>
+                      ))}
+                    </>
+                  )}
+
+                  {customerSearch.trim() && !customers.some(
+                    (c) => c.name.toLowerCase() === customerSearch.trim().toLowerCase()
+                  ) && (
+                    <>
+                      {filteredCustomers.length > 0 && (
+                        <div className="border-t border-slate-700/40 my-1" />
+                      )}
+                      <button
+                        type="button"
+                        onMouseDown={() => handleCreateNew(customerSearch)}
+                        className="w-full text-left px-4 py-2.5 flex items-center gap-2.5 text-emerald-400 hover:bg-emerald-500/8 transition-colors cursor-pointer"
+                      >
+                        <Plus size={14} className="shrink-0" />
+                        <span>新建客户 "{customerSearch.trim()}"</span>
+                      </button>
+                    </>
+                  )}
+
+                  {!customerSearch.trim() && filteredCustomers.length === 0 && (
+                    <div className="px-4 py-3 text-center text-sm text-slate-500">
+                      输入关键词搜索或创建新客户
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

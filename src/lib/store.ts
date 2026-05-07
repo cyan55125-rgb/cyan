@@ -30,7 +30,7 @@ interface AppStore {
   closeAddCustomer: () => void;
   openAddSale: () => void;
   closeAddSale: () => void;
-  addCustomer: (name: string, parentId: string | null) => void;
+  addCustomer: (name: string, parentId: string | null) => string;
   updateCustomer: (id: string, name: string, parentId: string | null) => void;
   confirmDeleteCustomer: (id: string, name: string) => void;
   deleteCustomer: (id: string) => void;
@@ -93,6 +93,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const updated = [...customers, newCustomer];
     storage.saveCustomers(updated);
     set({ customers: updated });
+    return newCustomer.id;
   },
 
   updateCustomer: (id, name, parentId) => {
