@@ -1,7 +1,7 @@
+import { useMemo, useState, useCallback } from "react";
 import { ChevronRight, ChevronDown, User } from "lucide-react";
 import { TreeNode } from "@/types";
 import { useAppStore } from "@/lib/store";
-import { useState, useCallback } from "react";
 import { clsx } from "clsx";
 
 interface TreeItemProps {
@@ -20,6 +20,17 @@ function TreeItem({ node, depth }: TreeItemProps) {
     selectCustomer(node.customer.id);
   }, [node.customer.id, selectCustomer]);
 
+  const handleToggle = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setExpanded((prev) => !prev);
+    },
+    []
+  );
+
+  const paddingLeft = useMemo(() => `${depth * 20 + 8}px`, [depth]);
+  const lineLeft = useMemo(() => `${depth * 20 + 22}px`, [depth]);
+
   return (
     <div>
       <div
@@ -29,7 +40,7 @@ function TreeItem({ node, depth }: TreeItemProps) {
             ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
             : "hover:bg-slate-700/40 text-slate-300 hover:text-slate-100 border border-transparent"
         )}
-        style={{ paddingLeft: `${depth * 20 + 8}px` }}
+        style={{ paddingLeft }}
         onClick={handleClick}
       >
         <span className="shrink-0 w-5 h-5 flex items-center justify-center">
@@ -38,19 +49,13 @@ function TreeItem({ node, depth }: TreeItemProps) {
               <ChevronDown
                 size={14}
                 className="text-slate-500 group-hover:text-slate-400"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setExpanded(false);
-                }}
+                onClick={handleToggle}
               />
             ) : (
               <ChevronRight
                 size={14}
                 className="text-slate-500 group-hover:text-slate-400"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setExpanded(true);
-                }}
+                onClick={handleToggle}
               />
             )
           ) : (
@@ -82,9 +87,7 @@ function TreeItem({ node, depth }: TreeItemProps) {
         <div className="relative">
           <div
             className="absolute top-0 bottom-0 left-0 border-l border-dashed border-slate-700/50"
-            style={{
-              left: `${depth * 20 + 22}px`,
-            }}
+            style={{ left: lineLeft }}
           />
           {node.children.map((child) => (
             <TreeItem key={child.customer.id} node={child} depth={depth + 1} />
@@ -98,11 +101,9 @@ function TreeItem({ node, depth }: TreeItemProps) {
 export default function CustomerTree() {
   const customers = useAppStore((s) => s.customers);
 
-  if (customers.length === 0) {
-    return null;
-  }
+  const roots = useMemo(() => {
+    if (customers.length === 0) return [];
 
-  const roots = (() => {
     const map = new Map<string, { customer: typeof customers[number]; children: string[] }>();
     for (const c of customers) {
       if (!map.has(c.id)) map.set(c.id, { customer: c, children: [] });
@@ -112,6 +113,7 @@ export default function CustomerTree() {
         map.get(c.parentId)!.children.push(c.id);
       }
     }
+
     const rootIds = customers
       .filter((c) => !c.parentId || !map.has(c.parentId))
       .map((c) => c.id);
@@ -126,7 +128,11 @@ export default function CustomerTree() {
     }
 
     return rootIds.map(buildNode);
-  })();
+  }, [customers]);
+
+  if (customers.length === 0) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col h-full">

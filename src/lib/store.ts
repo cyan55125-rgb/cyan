@@ -10,7 +10,27 @@ import {
 import * as storage from "@/lib/storage";
 import { generateId, exportToCSV, exportToHTMLTable } from "@/lib/utils";
 
-interface AppStore {
+let undoTimerId: ReturnType<typeof setTimeout> | null = null;
+
+function clearUndoTimer() {
+  if (undoTimerId !== null) {
+    clearTimeout(undoTimerId);
+    undoTimerId = null;
+  }
+}
+
+function scheduleAutoClear(get: () => AppStoreInternal, delayMs: number) {
+  clearUndoTimer();
+  const actionTimestamp = get().undoAction?.timestamp;
+  undoTimerId = setTimeout(() => {
+    const current = get().undoAction;
+    if (current && current.timestamp === actionTimestamp) {
+      get().clearUndo();
+    }
+  }, delayMs);
+}
+
+interface AppStoreInternal {
   customers: Customer[];
   sales: SaleRecord[];
   selectedCustomerId: string | null;
@@ -54,7 +74,9 @@ interface AppStore {
   exportData: (format: "csv" | "html") => void;
 }
 
-export const useAppStore = create<AppStore>((set, get) => ({
+type AppStore = Omit<AppStoreInternal, "clearUndo">;
+
+export const useAppStore = create<AppStoreInternal>((set, get) => ({
   customers: [],
   sales: [],
   selectedCustomerId: null,
@@ -129,15 +151,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
       }
     }
 
-    const removedCustomers = customers.filter((c) => descendantIds.has(c.id));
-    const removedSales = sales.filter((s) => descendantIds.has(s.customerId));
-
     customers = customers.filter((c) => !descendantIds.has(c.id));
     sales = sales.filter((s) => !descendantIds.has(s.customerId));
 
     storage.saveCustomers(customers);
     storage.saveSales(sales);
 
+    const currentSelected = get().selectedCustomerId;
     set({
       customers,
       sales,
@@ -150,16 +170,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
         timestamp: Date.now(),
       },
       selectedCustomerId:
-        get().selectedCustomerId && descendantIds.has(get().selectedCustomerId!)
+        currentSelected && descendantIds.has(currentSelected)
           ? null
-          : get().selectedCustomerId,
+          : currentSelected,
     });
 
-    setTimeout(() => {
-      if (get().undoAction?.timestamp === Date.now() - (30000 - (Date.now() - (get().undoAction?.timestamp || 0)))) {
-        set({ undoAction: null });
-      }
-    }, 30000);
+    scheduleAutoClear(get, 30000);
   },
 
   cancelDelete: () => {
@@ -197,16 +213,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
       },
     });
 
-    setTimeout(() => {
-      if (get().undoAction?.type === "deleteSale") {
-        set({ undoAction: null });
-      }
-    }, 15000);
+    scheduleAutoClear(get, 15000);
   },
 
   undoDelete: () => {
     const { undoAction, customers, sales } = get();
     if (!undoAction) return;
+
+    clearUndoTimer();
 
     if (undoAction.type === "deleteSale") {
       const data = undoAction.data as SaleRecord;
@@ -216,11 +230,17 @@ export const useAppStore = create<AppStore>((set, get) => ({
     } else if (undoAction.type === "deleteCustomer") {
       const data = undoAction.data as Customer;
       const relatedIds = undoAction.relatedIds || [];
-      const restoredCustomers = relatedIds
-        .map((rid) => customers.find((c) => c.id === rid))
-        .filter(Boolean) as Customer[];
+      const existingIds = new Set(customers.map((c) => c.id));
+      const restoredCustomers: Customer[] = [];
 
-      if (!restoredCustomers.find((c) => c.id === data.id)) {
+      for (const rid of relatedIds) {
+        if (!existingIds.has(rid)) {
+          const found = relatedIds.length > 1 ? null : data;
+          if (found) restoredCustomers.push(found);
+        }
+      }
+
+      if (!existingIds.has(data.id)) {
         restoredCustomers.push(data);
       }
 
@@ -230,7 +250,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }
   },
 
-  clearUndo: () => set({ undoAction: null }),
+  clearUndo: () => {
+    clearUndoTimer();
+    set({ undoAction: null });
+  },
 
   setDateFilter: (type, range) => {
     set({ dateFilterType: type, customDateRange: range || null });
@@ -269,10 +292,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
       const customer = customers.find((c) => c.id === selectedCustomerId);
       if (customer) {
         title = `${customer.name}-销售数据`;
+        const descIds = collectDescendantIds(selectedCustomerId, customers);
         exportSales = sales.filter(
-          (s) =>
-            s.customerId === selectedCustomerId ||
-            isDescendant(selectedCustomerId, s.customerId, customers)
+          (s) => descIds.has(s.customerId)
         );
       }
     }
@@ -320,13 +342,28 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
 }));
 
-function isDescendant(
+function collectDescendantIds(
   ancestorId: string,
-  customerId: string,
   customers: Customer[]
-): boolean {
-  const customer = customers.find((c) => c.id === customerId);
-  if (!customer || !customer.parentId) return false;
-  if (customer.parentId === ancestorId) return true;
-  return isDescendant(ancestorId, customer.parentId, customers);
+): Set<string> {
+  const ids = new Set<string>([ancestorId]);
+  const childMap = new Map<string, string[]>();
+  for (const c of customers) {
+    if (c.parentId !== null) {
+      if (!childMap.has(c.parentId)) childMap.set(c.parentId, []);
+      childMap.get(c.parentId)!.push(c.id);
+    }
+  }
+  const queue = [ancestorId];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const children = childMap.get(current);
+    if (children) {
+      for (const cid of children) {
+        ids.add(cid);
+        queue.push(cid);
+      }
+    }
+  }
+  return ids;
 }

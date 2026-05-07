@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { User, Link2, Download, FileSpreadsheet, FileText, CalendarDays, Filter } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { getTeamSales, getPersonalSales, formatCurrency, formatDate, getDateRangeLabel } from "@/lib/utils";
@@ -19,7 +19,48 @@ export default function CustomerDetail() {
   const [customEnd, setCustomEnd] = useState("");
   const [showExportMenu, setShowExportMenu] = useState(false);
 
-  if (!selectedId) {
+  const customer = useMemo(
+    () => customers.find((c) => c.id === selectedId),
+    [customers, selectedId]
+  );
+  const parentCustomer = useMemo(
+    () =>
+      customer?.parentId
+        ? customers.find((c) => c.id === customer.parentId)
+        : null,
+    [customer, customers]
+  );
+
+  const customRange = useMemo(
+    () =>
+      dateFilterType === "custom" && customStart && customEnd
+        ? { start: customStart, end: customEnd }
+        : null,
+    [dateFilterType, customStart, customEnd]
+  );
+
+  const personalSales = useMemo(
+    () =>
+      selectedId
+        ? getPersonalSales(selectedId, sales, dateFilterType, customRange || undefined)
+        : [],
+    [selectedId, sales, dateFilterType, customRange]
+  );
+
+  const personalTotal = useMemo(
+    () => personalSales.reduce((sum, s) => sum + s.amount, 0),
+    [personalSales]
+  );
+
+  const teamResult = useMemo(
+    () =>
+      selectedId
+        ? getTeamSales(selectedId, customers, sales, dateFilterType, customRange || undefined)
+        : { totalAmount: 0, members: [] },
+    [selectedId, customers, sales, dateFilterType, customRange]
+  );
+
+  if (!selectedId || !customer) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -37,35 +78,19 @@ export default function CustomerDetail() {
     );
   }
 
-  const customer = customers.find((c) => c.id === selectedId);
-  if (!customer) return null;
-
-  const parentCustomer = customer.parentId
-    ? customers.find((c) => c.id === customer.parentId)
-    : null;
-
-  const customRange =
-    dateFilterType === "custom" && customStart && customEnd
-      ? { start: customStart, end: customEnd }
-      : null;
-
-  const personalSales = getPersonalSales(selectedId, sales, dateFilterType, customRange || undefined);
-  const personalTotal = personalSales.reduce((sum, s) => sum + s.amount, 0);
-  const teamResult = getTeamSales(selectedId, customers, sales, dateFilterType, customRange || undefined);
-
-  const handleDateFilterChange = (type: DateFilterType) => {
+  function handleDateFilterChange(type: DateFilterType) {
     setDateFilter(type);
     if (type !== "custom") {
       setCustomStart("");
       setCustomEnd("");
     }
-  };
+  }
 
-  const applyCustomRange = () => {
+  function applyCustomRange() {
     if (customStart && customEnd) {
       setDateFilter("custom", { start: customStart, end: customEnd });
     }
-  };
+  }
 
   const filterOptions: { type: DateFilterType; label: string }[] = [
     { type: "all", label: "全部" },
@@ -162,17 +187,26 @@ export default function CustomerDetail() {
                 </button>
                 {showExportMenu && (
                   <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowExportMenu(false)}
+                    />
                     <div className="absolute right-0 top-full mt-1 w-40 rounded-xl bg-slate-800 border border-slate-700/60 shadow-xl z-50 overflow-hidden">
                       <button
-                        onClick={() => { exportData("csv"); setShowExportMenu(false); }}
+                        onClick={() => {
+                          exportData("csv");
+                          setShowExportMenu(false);
+                        }}
                         className="w-full text-left px-4 py-2.5 flex items-center gap-2 text-sm text-slate-300 hover:bg-slate-700/50 transition-colors cursor-pointer"
                       >
                         <FileSpreadsheet size={14} />
                         导出 CSV (Excel)
                       </button>
                       <button
-                        onClick={() => { exportData("html"); setShowExportMenu(false); }}
+                        onClick={() => {
+                          exportData("html");
+                          setShowExportMenu(false);
+                        }}
                         className="w-full text-left px-4 py-2.5 flex items-center gap-2 text-sm text-slate-300 hover:bg-slate-700/50 transition-colors cursor-pointer"
                       >
                         <FileText size={14} />
@@ -219,7 +253,7 @@ export default function CustomerDetail() {
                 <button
                   onClick={applyCustomRange}
                   disabled={!customStart || !customEnd}
-                  className="px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/25 disabled:opacity-40 transition-all cursor-pointer"
+                  className="px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                 >
                   确定
                 </button>
