@@ -1,39 +1,35 @@
 import { create } from 'zustand';
-import type { Post, LanguageCode, Comment, User } from '@/types';
+import type { Post, LanguageCode, Comment, Author } from '@/types';
 
 interface CommunityState {
   posts: Post[];
   selectedTopic: string;
   likePost: (postId: string) => void;
   addComment: (postId: string, content: string) => void;
-  createPost: (content: string, langTag: LanguageCode, currentUser: User) => void;
+  createPost: (content: string, langTag: LanguageCode, currentAuthor: Author) => void;
   setTopic: (topic: string) => void;
 }
 
-const MOCK_USER: User = {
+const MOCK_AUTHOR: Author = {
   id: 'mock_user',
-  email: 'mock@example.com',
-  nickname: '学习者',
+  name: '学习者',
   avatar: '',
-  targetLanguage: 'en',
-  currentLevel: 'intermediate',
-  joinDate: new Date().toISOString(),
-  studyStreak: 5,
-  totalStudyMinutes: 120,
+  level: 'intermediate',
 };
 
 export const useCommunityStore = create<CommunityState>((set, get) => ({
   posts: [
     {
       id: 'post_1',
-      author: MOCK_USER,
+      author: MOCK_AUTHOR,
       content: '今天完成了英语初级课程的第一章，感觉收获很大！分享给大家我的学习心得...',
       languageTag: 'en',
       likes: 12,
-      comments: [
+      comments: 1,
+      commentList: [
         {
           id: 'comment_1',
-          author: { ...MOCK_USER, nickname: '语言爱好者', id: 'mock_2' },
+          author: { id: 'mock_2', name: '语言爱好者', avatar: '', level: 'intermediate' },
           content: '太棒了！我也在学习英语，一起加油！',
           createdAt: new Date(Date.now() - 3600000).toISOString(),
           likes: 3,
@@ -44,11 +40,11 @@ export const useCommunityStore = create<CommunityState>((set, get) => ({
     },
     {
       id: 'post_2',
-      author: { ...MOCK_USER, nickname: '日语初学者', id: 'mock_3' },
+      author: { id: 'mock_3', name: '日语初学者', avatar: '', level: 'beginner' },
       content: '日语的敬语系统真的好难啊，有什么好的学习方法吗？',
       languageTag: 'ja',
       likes: 8,
-      comments: [],
+      comments: 0,
       createdAt: new Date(Date.now() - 86400000).toISOString(),
       isLiked: false,
     },
@@ -72,7 +68,7 @@ export const useCommunityStore = create<CommunityState>((set, get) => ({
   addComment: (postId: string, content: string) => {
     const newComment: Comment = {
       id: `comment_${Date.now()}`,
-      author: MOCK_USER,
+      author: MOCK_AUTHOR,
       content,
       createdAt: new Date().toISOString(),
       likes: 0,
@@ -80,20 +76,24 @@ export const useCommunityStore = create<CommunityState>((set, get) => ({
     set((state) => ({
       posts: state.posts.map((post) =>
         post.id === postId
-          ? { ...post, comments: [...post.comments, newComment] }
+          ? {
+              ...post,
+              comments: post.comments + 1,
+              commentList: [...(post.commentList || []), newComment],
+            }
           : post
       ),
     }));
   },
 
-  createPost: (content: string, langTag: LanguageCode, currentUser: User) => {
+  createPost: (content: string, langTag: LanguageCode, currentAuthor: Author) => {
     const newPost: Post = {
       id: `post_${Date.now()}`,
-      author: currentUser,
+      author: currentAuthor,
       content,
       languageTag: langTag,
       likes: 0,
-      comments: [],
+      comments: 0,
       createdAt: new Date().toISOString(),
       isLiked: false,
     };

@@ -23,5 +23,5 @@ export interface GrammarPoint {
   examples: GrammarExample[];
   exercises: GrammarExercise[];
   language: Language;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  difficulty: 'beginner' | 'intermediate' | 'advanced' | 'elementary' | 'upper-intermediate';
 }

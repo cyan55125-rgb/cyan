@@ -1,9 +1,15 @@
 import type { LanguageCode } from './course';
-import type { User } from './user';
 
 export type PartOfSpeech = 'noun' | 'verb' | 'adjective' | 'adverb' | 'pronoun' | 'preposition' | 'conjunction' | 'interjection';
 export type GrammarExerciseType = 'fill-blank' | 'multiple-choice' | 'ordering';
 export type AchievementRarity = 'common' | 'rare' | 'epic' | 'legendary';
+
+export interface Author {
+  id: string;
+  name: string;
+  avatar: string;
+  level?: string;
+}
 
 export interface VocabularyItem {
   id: string;
@@ -55,12 +61,13 @@ export interface Achievement {
   condition: string;
   progress: number;
   maxProgress: number;
-  unlockedAt?: string;
+  target?: number;
+  unlockedAt?: string | null;
 }
 
 export interface Comment {
   id: string;
-  author: User;
+  author: Author;
   content: string;
   createdAt: string;
   likes: number;
@@ -68,12 +75,15 @@ export interface Comment {
 
 export interface Post {
   id: string;
-  author: User;
+  author: Author;
+  title?: string;
   content: string;
   images?: string[];
-  languageTag: LanguageCode;
+  languageTag?: LanguageCode;
   likes: number;
-  comments: Comment[];
+  comments: number;
+  tags?: string[];
   createdAt: string;
-  isLiked: boolean;
+  isLiked?: boolean;
+  commentList?: Comment[];
 }

@@ -3,10 +3,10 @@ import type { Course, LanguageCode, ProficiencyLevel } from '@/types';
 
 interface CourseState {
   courses: Course[];
-  selectedLanguage: LanguageCode;
+  selectedLanguage: LanguageCode | 'all';
   selectedLevel: ProficiencyLevel | 'all';
   searchQuery: string;
-  setSelectedLanguage: (lang: LanguageCode) => void;
+  setSelectedLanguage: (lang: LanguageCode | 'all') => void;
   setSelectedLevel: (level: ProficiencyLevel | 'all') => void;
   setSearchQuery: (query: string) => void;
   getFilteredCourses: () => Course[];
@@ -14,7 +14,7 @@ interface CourseState {
 
 export const useCourseStore = create<CourseState>((set, get) => ({
   courses: [],
-  selectedLanguage: 'en',
+  selectedLanguage: 'all',
   selectedLevel: 'all',
   searchQuery: '',
 
@@ -27,7 +27,7 @@ export const useCourseStore = create<CourseState>((set, get) => ({
   getFilteredCourses: () => {
     const { courses, selectedLanguage, selectedLevel, searchQuery } = get();
     return courses.filter((course) => {
-      const languageMatch = course.languageId === selectedLanguage;
+      const languageMatch = selectedLanguage === 'all' || course.language === selectedLanguage;
       const levelMatch = selectedLevel === 'all' || course.level === selectedLevel;
       const searchMatch =
         !searchQuery ||

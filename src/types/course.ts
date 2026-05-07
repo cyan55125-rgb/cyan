@@ -1,4 +1,10 @@
-import type { Language, Level, Difficulty } from './index';
+import type { Language, Level } from './index';
+
+export type LessonType = 'vocabulary' | 'grammar' | 'listening' | 'speaking' | 'reading' | 'writing';
+
+export type LanguageCode = Language;
+
+export type ProficiencyLevel = Level;
 
 export interface Lesson {
   id: string;
@@ -17,8 +23,8 @@ export interface Course {
   id: string;
   title: string;
   description: string;
-  language: Language;
-  level: Level;
+  language: LanguageCode;
+  level: ProficiencyLevel;
   coverImage: string;
   chapters: Chapter[];
   totalLessons: number;

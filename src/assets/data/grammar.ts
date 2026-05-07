@@ -51,7 +51,7 @@ export const grammarData: GrammarPoint[] = [
     ],
     exercises: [
       { id: 'en-ex-003-1', type: 'fill-blank', question: 'They _____ (know) each other for ten years.', answer: 'have known', explanation: 'for ten years 表示持续时间段，用现在完成时 have known。' },
-      { id: 'en-ex-003-2', type: 'multiple-choice', question: 'Choose the correct sentence:', options: ['I have saw this movie before.', I have seen this movie before.', 'I did see this movie before.', 'I has seen this movie before.'], answer: 'I have seen this movie before.', explanation: 'I 用 have，see 的过去分词是 seen。' },
+      { id: 'en-ex-003-2', type: 'multiple-choice', question: 'Choose the correct sentence:', options: ['I have saw this movie before.', 'I have seen this movie before.', 'I did see this movie before.', 'I has seen this movie before.'], answer: 'I have seen this movie before.', explanation: 'I 用 have，see 的过去分词是 seen。' },
       { id: 'en-ex-003-3', type: 'fill-blank', question: 'He _____ (not/complete) the project yet.', answer: "hasn't completed", explanation: 'yet 常用于现在完成时否定句，He 是第三人称单数用 hasn\'t。' },
       { id: 'en-ex-003-4', type: 'ordering', question: 'Rearrange: (never / sushi / have / tried / I / )', answer: ['I', 'have', 'never', 'tried', 'sushi'], explanation: 'never 是频度副词，放在 have 和过去分词之间。' }
     ],

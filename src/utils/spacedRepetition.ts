@@ -22,10 +22,10 @@ export function getReviewQueue(vocabList: VocabularyItem[]): VocabularyItem[] {
   const now = Date.now();
 
   return vocabList
-    .filter((item) => item.nextReviewAt <= now)
+    .filter((item) => new Date(item.nextReviewAt).getTime() <= now)
     .sort((a, b) => {
-      const overdueA = now - a.nextReviewAt;
-      const overdueB = now - b.nextReviewAt;
+      const overdueA = now - new Date(a.nextReviewAt).getTime();
+      const overdueB = now - new Date(b.nextReviewAt).getTime();
       const priorityA = overdueA / (a.reviewCount + 1);
       const priorityB = overdueB / (b.reviewCount + 1);
       return priorityB - priorityA;
